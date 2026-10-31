@@ -96,7 +96,7 @@ export class StripeBillingProvider implements BillingProvider {
 
     const { createAdminClient } = await import("@/lib/supabase/server");
     const admin = await createAdminClient();
-    const object = event.data.object as Record<string, unknown>;
+    const object = event.data.object as unknown as Record<string, unknown>;
     const userId = (object?.metadata as Record<string, string> | undefined)?.userId;
 
     switch (event.type) {
