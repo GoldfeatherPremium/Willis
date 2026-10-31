@@ -28,7 +28,6 @@ export class StripeBillingProvider implements BillingProvider {
   }
 
   private async getOrCreateCustomer(userId: string) {
-    // Upsert stripe_customer_id on the subscription row.
     const { createAdminClient } = await import("@/lib/supabase/server");
     const admin = await createAdminClient();
     const { data: sub } = await admin
@@ -97,7 +96,8 @@ export class StripeBillingProvider implements BillingProvider {
 
     const { createAdminClient } = await import("@/lib/supabase/server");
     const admin = await createAdminClient();
-    const userId = event.data.object?.metadata?.userId as string | undefined;
+    const object = event.data.object as Record<string, unknown>;
+    const userId = (object?.metadata as Record<string, string> | undefined)?.userId;
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -108,7 +108,7 @@ export class StripeBillingProvider implements BillingProvider {
         await admin
           .from("subscriptions")
           .update({
-            plan: planId as never,
+            plan: planId,
             status: "active",
             stripe_subscription_id: (session.subscription as string) ?? null,
             current_period_start: new Date().toISOString(),
@@ -123,7 +123,7 @@ export class StripeBillingProvider implements BillingProvider {
         if (!userId) break;
         await admin
           .from("subscriptions")
-          .update({ status: sub.status as never })
+          .update({ status: sub.status })
           .eq("user_id", userId);
         break;
       }
