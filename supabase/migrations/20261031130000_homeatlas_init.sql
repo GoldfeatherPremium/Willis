@@ -8,6 +8,10 @@
 create extension if not exists vector with schema extensions;
 create extension if not exists pg_trgm;
 
+-- Defer function body validation: helpers reference tables that
+-- are created later in this migration.
+set check_function_bodies = off;
+
 -- Enums ------------------------------------------------------
 create type public.plan_id as enum ('explorer','personal','family','collector');
 create type public.subscription_status as enum ('trialing','active','past_due','canceled','unpaid','incomplete');
@@ -29,48 +33,6 @@ create type public.asset_kind as enum ('image','video','audio');
 create type public.document_kind as enum ('receipt','manual','warranty','other');
 create type public.notification_type as enum ('scan_completed','scan_failed','object_verified','family_invite','subscription','system');
 create type public.member_role as enum ('owner','admin','member','viewer');
-
--- Access helpers (used by RLS policies) ----------------------
-create or replace function public.is_home_member(home_id uuid)
-returns boolean
-language sql stable security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.home_members hm
-    where hm.home_id = $1 and hm.user_id = auth.uid()
-  );
-$$;
-
-create or replace function public.is_home_owner(home_id uuid)
-returns boolean
-language sql stable security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.home_members hm
-    where hm.home_id = $1 and hm.user_id = auth.uid() and hm.role = 'owner'
-  );
-$$;
-
-create or replace function public.is_home_admin(home_id uuid)
-returns boolean
-language sql stable security definer
-set search_path = public
-as $$
-  select exists (
-    select 1 from public.home_members hm
-    where hm.home_id = $1 and hm.user_id = auth.uid() and hm.role in ('owner','admin')
-  );
-$$;
-
-create or replace function public.get_my_home_ids()
-returns uuid[]
-language sql stable security definer
-set search_path = public
-as $$
-  select coalesce(array_agg(home_id), '{}') from public.home_members where user_id = auth.uid();
-$$;
 
 -- profiles ----------------------------------------------------
 create table public.profiles (
@@ -382,6 +344,48 @@ create table public.processing_usage (
 );
 create index processing_usage_user_idx on public.processing_usage(user_id, metered_at);
 
+-- Access helpers (used by RLS policies) ----------------------
+create or replace function public.is_home_member(home_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.home_members hm
+    where hm.home_id = $1 and hm.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.is_home_owner(home_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.home_members hm
+    where hm.home_id = $1 and hm.user_id = auth.uid() and hm.role = 'owner'
+  );
+$$;
+
+create or replace function public.is_home_admin(home_id uuid)
+returns boolean
+language sql stable security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.home_members hm
+    where hm.home_id = $1 and hm.user_id = auth.uid() and hm.role in ('owner','admin')
+  );
+$$;
+
+create or replace function public.get_my_home_ids()
+returns uuid[]
+language sql stable security definer
+set search_path = public
+as $$
+  select coalesce(array_agg(home_id), '{}') from public.home_members where user_id = auth.uid();
+$$;
+
 -- updated_at trigger -----------------------------------------
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
@@ -492,7 +496,6 @@ declare
   v_user uuid := auth.uid();
   v_home uuid;
   v_living uuid; v_kitchen uuid; v_bedroom uuid; v_study uuid; v_storage uuid;
-  v_sofa uuid; v_camera uuid; v_laptop uuid; v_battery uuid; v_charger uuid;
 begin
   if v_user is null then raise exception 'Not authenticated'; end if;
 
@@ -512,7 +515,6 @@ begin
     (v_home, 'Storage Room', 'storage', 0, '{"x":12,"y":0,"z":4}', 3, 3, 2.5, true)
   returning id into v_storage;
 
-  update public.rooms set name = 'Living Room' where id = (select id from public.rooms where home_id = v_home order by created_at limit 1 offset 0);
   select id into v_living from public.rooms where home_id = v_home order by created_at limit 1;
   select id into v_kitchen from public.rooms where home_id = v_home order by created_at limit 1 offset 1;
   select id into v_bedroom from public.rooms where home_id = v_home order by created_at limit 1 offset 2;
@@ -538,14 +540,7 @@ begin
     (v_home, v_study, 'Collectible Figures', 'collectible', 'Set of 6 designer figures', null, null, v_user, true),
     (v_home, v_storage, 'Storage Box', 'storage_container', 'Large clear storage box', null, null, v_user, true),
     (v_home, v_storage, 'Suitcase', 'accessory', 'Hard-shell suitcase', 'Samsonite', 'Freeform', v_user, true),
-    (v_home, v_storage, 'Books', 'book', 'Box of paperback books', null, null, v_user, true)
-  returning id into v_sofa;
-
-  select id into v_sofa from public.objects where home_id = v_home and name = 'Sofa' limit 1;
-  select id into v_camera from public.objects where home_id = v_home and name = 'Camera' limit 1;
-  select id into v_laptop from public.objects where home_id = v_home and name = 'Laptop' limit 1;
-  select id into v_battery from public.objects where home_id = v_home and name = 'Camera Battery' limit 1;
-  select id into v_charger from public.objects where home_id = v_home and name = 'Camera Charger' limit 1;
+    (v_home, v_storage, 'Books', 'book', 'Box of paperback books', null, null, v_user, true);
 
   insert into public.object_observations (object_id, room_id, position, confidence, source, verification_status)
   select o.id, o.room_id, '{"x":0.5,"y":0.5,"z":0.5}', 0.99, 'ai', 'unverified'
