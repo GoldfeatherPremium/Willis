@@ -5,8 +5,8 @@ import { requireApiHomeAccess } from "@/lib/api-helpers";
 import { getHomeDetail } from "@/lib/server/data";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
-import { CreateHomeDialog } from "@/components/home/create-home-dialog";
 import { formatRelativeTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
