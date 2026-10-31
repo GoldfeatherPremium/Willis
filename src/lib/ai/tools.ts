@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
-import type { Database } from "@/lib/types/database";
 
 /**
  * Backend tools the assistant uses. Every tool queries the real database
@@ -27,10 +26,6 @@ const supabaseFor = async () => {
   if (!user) throw new Error("unauthenticated");
   const supabase = await createClient();
   return { user, supabase };
-};
-
-const requireDemoGuard = (ctx: ToolContext) => {
-  // Safety: never allow tools in the demo conversation to mutate real data.
 };
 
 export const tools: AssistantTool[] = [
@@ -121,10 +116,7 @@ export const tools: AssistantTool[] = [
       const { supabase } = await supabaseFor();
       const { data, error } = await supabase
         .from("object_observations")
-        .select(
-          `id, observed_at, confidence, source, verification_status, position,
-           room:rooms(id, name)`
-        )
+        .select(`id, observed_at, confidence, source, verification_status, position, room:rooms(id, name)`)
         .eq("object_id", args.objectId)
         .order("observed_at", { ascending: false })
         .limit(args.limit ?? 20);
@@ -241,14 +233,22 @@ export const tools: AssistantTool[] = [
 
 export const toolMap = new Map<string, AssistantTool>(tools.map((t) => [t.name, t]));
 
+function zodToJsonSchema(params: z.ZodTypeAny): Record<string, unknown> {
+  if (params instanceof z.ZodObject) {
+    const shape = (params as z.ZodObject<any>).shape as Record<string, z.ZodTypeAny>;
+    const properties: Record<string, unknown> = {};
+    for (const [key, schema] of Object.entries(shape)) {
+      properties[key] = { type: schema instanceof z.ZodNumber ? "number" : "string" };
+    }
+    return { type: "object", properties, additionalProperties: false };
+  }
+  return { type: "object", properties: {}, additionalProperties: true };
+}
+
 export function toolDefinitions(): NonNullable<import("./provider").LlmRequest["tools"]> {
   return tools.map((t) => ({
     name: t.name,
     description: t.description,
-    parameters: (t.parameters as z.ZodObject<never>).toJSON?.() as Record<string, unknown> ?? {
-      type: "object",
-      properties: {},
-      additionalProperties: true
-    }
+    parameters: zodToJsonSchema(t.parameters)
   }));
 }
