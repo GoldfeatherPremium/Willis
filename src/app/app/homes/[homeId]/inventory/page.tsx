@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { Button } from "@/components/ui/button";
-import { InventoryGrid } from "@/components/object/inventory-grid";
+import { InventoryGrid, type InvObject } from "@/components/object/inventory-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export default async function InventoryPage({ params }: { params: Promise<{ home
   await requireApiHomeAccess(homeId);
 
   const supabase = await createClient();
-  const { data: objects } = await supabase
+  const { data: raw } = await supabase
     .from("objects")
     .select(
       `id, name, category, description, brand, model, thumbnail_url, is_demo, ai_extracted, created_at,
@@ -27,6 +27,19 @@ export default async function InventoryPage({ params }: { params: Promise<{ home
     .order("created_at", { ascending: false })
     .limit(200);
 
+  const objects: InvObject[] = (raw ?? []).map((o: any) => ({
+    id: o.id,
+    name: o.name,
+    category: o.category,
+    brand: o.brand,
+    model: o.model,
+    is_demo: o.is_demo,
+    ai_extracted: o.ai_extracted,
+    created_at: o.created_at,
+    room: Array.isArray(o.room) ? (o.room[0] ?? null) : (o.room ?? null),
+    location: Array.isArray(o.location) ? (o.location[0] ?? null) : (o.location ?? null)
+  }));
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,7 +47,7 @@ export default async function InventoryPage({ params }: { params: Promise<{ home
         <p className="mt-1 text-sm text-secondary">Everything AI found and you confirmed.</p>
       </div>
 
-      {(objects ?? []).length === 0 ? (
+      {objects.length === 0 ? (
         <Card>
           <EmptyState
             icon={<PackageSearch className="h-5 w-5" />}
@@ -44,7 +57,7 @@ export default async function InventoryPage({ params }: { params: Promise<{ home
           />
         </Card>
       ) : (
-        <InventoryGrid homeId={homeId} objects={objects ?? []} />
+        <InventoryGrid homeId={homeId} objects={objects} />
       )}
     </div>
   );
