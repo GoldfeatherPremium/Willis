@@ -4,6 +4,7 @@ import { listUserHomes } from "@/lib/server/data";
 import { EmptyState } from "@/components/ui/feedback";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { CreateHomeDialog } from "@/components/home/create-home-dialog";
 import { DemoSetupButton } from "@/components/home/demo-setup-button";
 import { formatRelativeTime } from "@/lib/utils";
