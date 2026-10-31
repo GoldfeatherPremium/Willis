@@ -16,7 +16,7 @@ import type { RoomType } from "@/lib/types/database";
 const SIM_DIMENSIONS = 1536;
 
 /** Deterministic hash -> stable vector so similar text embeds similarly. */
-function hashToUnitVector(seed: string): number[] {
+function hashToUnitVector(seed: string): [number, number] {
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
   for (let i = 0; i < seed.length; i++) {
@@ -57,9 +57,6 @@ export class SimulatedLlmProvider implements LlmProvider {
   readonly isSimulated = true;
 
   async chat(_request: LlmRequest): Promise<LlmResponse> {
-    // The orchestration loop routes simulated conversations through
-    // simulatedRespond() instead of this method. This exists to satisfy the
-    // interface and as a fallback.
     return {
       content: "Simulated assistant. Provide a question about your home inventory.",
       provider: this.name,
@@ -128,11 +125,9 @@ export class SimulatedVisionProvider implements VisionProvider {
     homeId: string;
     scanId: string;
   }): Promise<DetectedObject[]> {
-    // Development adapter: returns a labelled, room-type-based library. Real
-    // vision providers replace this class entirely.
     const key = (request.roomType || "other") as RoomType;
     const library = ROOM_LIBRARY[key] ?? ROOM_LIBRARY.other;
-    return library.map((o) => ({ ...o }));
+    return (library ?? []).map((o) => ({ ...o }));
   }
 }
 
