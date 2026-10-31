@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Line } from "@react-three/drei";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import * as THREE from "three";
 import type { ViewerObject } from "./viewer";
 
@@ -36,11 +36,7 @@ function ObjectMarker({ object, onSelect }: { object: ViewerObject; onSelect: (o
         roughness={0.3}
       />
       {hovered && (
-        <Line
-          points={[[0, 0, 0], [0, 1.6, 0]]}
-          color="#E7B77A"
-          lineWidth={1}
-        />
+        <Line points={[[0, 0, 0], [0, 1.6, 0]]} color="#E7B77A" lineWidth={1} />
       )}
     </mesh>
   );
@@ -100,19 +96,10 @@ export default function Scene({
   onError?: () => void;
 }) {
   const reduceMotion = useReducedMotion();
-  const [show, setShow] = React.useState(false);
 
   React.useEffect(() => {
-    const t = setTimeout(() => setShow(true), 120);
-    return () => clearTimeout(t);
+    // no-op keeps this component mounted; animation is handled by OrbitControls
   }, []);
-
-  React.useEffect(() => {
-    if (!show || reduceMotion) return;
-    // Gentle slow rotation of the whole room (subtle, not decorative-heavy).
-    const id = setInterval(() => {}, 100000);
-    return () => clearInterval(id);
-  }, [show, reduceMotion]);
 
   return (
     <Canvas
@@ -124,18 +111,10 @@ export default function Scene({
         state.gl.domElement.addEventListener("webglcontextlost", () => onError?.());
       }}
     >
-      {show && (
-        <motion.group
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 60, damping: 16 }}
-        >
-          <RoomShell width={Math.max(width, 3)} length={Math.max(length, 3)} height={Math.max(height, 2.2)} />
-          {objects.map((o) => (
-            <ObjectMarker key={o.id} object={o} onSelect={(obj) => onSelect?.(obj)} />
-          ))}
-        </motion.group>
-      )}
+      <RoomShell width={Math.max(width, 3)} length={Math.max(length, 3)} height={Math.max(height, 2.2)} />
+      {objects.map((o) => (
+        <ObjectMarker key={o.id} object={o} onSelect={(obj) => onSelect?.(obj)} />
+      ))}
       <OrbitControls
         enablePan
         enableZoom
