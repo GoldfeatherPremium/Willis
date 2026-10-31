@@ -1,14 +1,14 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-
-import type { Database } from "@/lib/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Browser-side Supabase client. Safe to import in client components.
- * Uses NEXT_PUBLIC_* env vars.
+ * Uses NEXT_PUBLIC_* env vars. Query results are loosely typed; the
+ * `Database` interfaces describe payload shapes at the app layer.
  */
-export function createClient() {
+export function createClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -19,7 +19,7 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient<Database>(url, anonKey);
+  return createBrowserClient(url, anonKey);
 }
 
 /** True when Supabase env is configured (used to render graceful "not configured" states). */
