@@ -16,6 +16,19 @@
     --color-warm: #e7b77a;
     --color-success: #65c99b;
     --color-error: #ff7474;
+
+    /* RGB channels for Tailwind opacity modifiers (<alpha-value>). */
+    --color-bg-rgb: 9 11 13;
+    --color-bg-secondary-rgb: 17 21 25;
+    --color-surface-rgb: 23 28 33;
+    --color-surface-hover-rgb: 29 35 42;
+    --color-text-primary-rgb: 245 242 236;
+    --color-text-secondary-rgb: 164 169 175;
+    --color-accent-rgb: 155 203 255;
+    --color-accent-soft-rgb: 155 203 255;
+    --color-warm-rgb: 231 183 122;
+    --color-success-rgb: 101 201 155;
+    --color-error-rgb: 255 116 116;
   }
 
   * {
