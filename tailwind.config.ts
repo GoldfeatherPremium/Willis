@@ -6,16 +6,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "var(--color-bg)",
-        "bg-secondary": "var(--color-bg-secondary)",
-        surface: "var(--color-surface)",
-        "surface-hover": "var(--color-surface-hover)",
+        bg: "rgb(var(--color-bg-rgb) / <alpha-value>)",
+        "bg-secondary": "rgb(var(--color-bg-secondary-rgb) / <alpha-value>)",
+        surface: "rgb(var(--color-surface-rgb) / <alpha-value>)",
+        "surface-hover": "rgb(var(--color-surface-hover-rgb) / <alpha-value>)",
         border: "var(--color-border)",
-        primary: { DEFAULT: "var(--color-text-primary)", muted: "var(--color-text-secondary)" },
-        accent: { DEFAULT: "var(--color-accent)", soft: "var(--color-accent-soft)" },
-        warm: "var(--color-warm)",
-        success: "var(--color-success)",
-        error: "var(--color-error)"
+        primary: { DEFAULT: "rgb(var(--color-text-primary-rgb) / <alpha-value>)", muted: "rgb(var(--color-text-secondary-rgb) / <alpha-value>)" },
+        accent: { DEFAULT: "rgb(var(--color-accent-rgb) / <alpha-value>)", soft: "rgb(var(--color-accent-soft-rgb) / <alpha-value>)" },
+        warm: "rgb(var(--color-warm-rgb) / <alpha-value>)",
+        success: "rgb(var(--color-success-rgb) / <alpha-value>)",
+        error: "rgb(var(--color-error-rgb) / <alpha-value>)"
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
