@@ -4,6 +4,7 @@ import { requireApiHomeAccess } from "@/lib/api-helpers";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
+import { Button } from "@/components/ui/button";
 import { InventoryGrid } from "@/components/object/inventory-grid";
 
 export const dynamic = "force-dynamic";
