@@ -6,7 +6,7 @@ import {
   requireApiUser,
   requireApiHomeAccess
 } from "@/lib/api-helpers";
-import { getEmbeddingProvider, simulatedEmbed } from "@/lib/ai";
+import { getEmbeddingProvider } from "@/lib/ai";
 
 const searchSchema = z.object({
   homeId: z.string().uuid(),
@@ -25,10 +25,12 @@ export const POST = withErrorHandling(async (request) => {
   const supabase = await createClient();
   const embeddingProvider = getEmbeddingProvider();
   const [embedding] = await embeddingProvider.embedTexts([body.query]);
+  if (!embedding) {
+    throw new Error("Embedding generation returned no vector.");
+  }
 
   const vectorStr = `[${embedding.map((v) => v.toFixed(6)).join(",")}]`;
 
-  // pgvector similarity via security_invoker function (RLS-scoped).
   const { data: semantic, error: semanticError } = await supabase.rpc("search_objects_semantic", {
     p_home_id: body.homeId,
     p_query_embedding: vectorStr,
@@ -54,7 +56,6 @@ export const POST = withErrorHandling(async (request) => {
     objects.push(...(data ?? []));
   }
 
-  // Keyword fallback always runs (handles zero-embedding matches).
   const term = `%${body.query.toLowerCase()}%`;
   const { data: keyword } = await supabase
     .from("objects")
