@@ -7,6 +7,7 @@ import {
   parseIdParam,
   ApiError
 } from "@/lib/api-helpers";
+import { getReconstructionProvider } from "@/lib/reconstruction";
 
 /** Starts/retries processing. Idempotent. */
 export const POST = withErrorHandling(async (_request, ctx) => {
@@ -36,13 +37,24 @@ export const POST = withErrorHandling(async (_request, ctx) => {
   if (job) {
     await admin.from("reconstruction_jobs").update({ status: "queued", progress: 0, error: null }).eq("id", job.id);
   } else {
+    const { data: roomInfo } = await admin.from("scans").select("room_id").eq("id", scanId).single();
     await admin.from("reconstruction_jobs").insert({
       scan_id: scanId,
       home_id: scan.home_id,
-      room_id: (await admin.from("scans").select("room_id").eq("id", scanId).single()).data?.room_id,
+      room_id: roomInfo?.room_id,
       provider: "simulated",
       status: "queued"
     });
+  }
+
+  const provider = getReconstructionProvider();
+  if (provider.isSimulated) {
+    const { runPendingJobs } = await import("@/lib/jobs/worker");
+    try {
+      await runPendingJobs(1);
+    } catch {
+      // cron worker retries later
+    }
   }
 
   return ok({ started: true });
