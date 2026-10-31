@@ -1,14 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/v1/internal/worker?limit=2",
       "schedule": "0 2 * * *"
     }
-  ],
-  "git": {
-    "deploymentEnabled": {
-      "agent/*": false
-    }
-  }
+  ]
 }
