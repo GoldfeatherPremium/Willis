@@ -2,8 +2,12 @@ import { describe, it, expect } from "vitest";
 import { formatRelativeTime, initials, truncate, pluralize, formatCurrency } from "@/lib/utils";
 
 describe("formatRelativeTime", () => {
+  it("treats recent timestamps as just now", () => {
+    expect(formatRelativeTime(new Date(Date.now() - 5_000))).toBe("just now");
+  });
+
   it("formats seconds and minutes", () => {
-    expect(formatRelativeTime(new Date(Date.now() - 10_000))).toBe("10s ago");
+    expect(formatRelativeTime(new Date(Date.now() - 45_000))).toBe("45s ago");
     expect(formatRelativeTime(new Date(Date.now() - 120_000))).toBe("2m ago");
   });
 
