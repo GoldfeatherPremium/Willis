@@ -1,5 +1,6 @@
 import { requireApiHomeAccess } from "@/lib/api-helpers";
 import { listUserHomes } from "@/lib/server/data";
+import { Card } from "@/components/ui/card";
 import { AssistantChat } from "@/components/assistant/assistant-chat";
 import { HomeSwitcher } from "@/components/shell/home-switcher";
 
