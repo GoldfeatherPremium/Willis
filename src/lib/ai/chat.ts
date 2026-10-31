@@ -20,8 +20,18 @@ export async function runAssistantChat(params: {
   const ctx: ToolContext = { userId: user.id, homeId: params.homeId };
 
   // Resolve / create conversation
-  let conversationId = params.conversationId;
-  if (!conversationId) {
+  let conversationId: string;
+  if (params.conversationId) {
+    const { data: convo } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("id", params.conversationId)
+      .eq("home_id", params.homeId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!convo) throw new Error("conversation_not_found");
+    conversationId = convo.id;
+  } else {
     const { data, error } = await supabase
       .from("conversations")
       .insert({ home_id: params.homeId, user_id: user.id })
@@ -29,15 +39,6 @@ export async function runAssistantChat(params: {
       .single();
     if (error) throw error;
     conversationId = data.id;
-  } else {
-    const { data: convo } = await supabase
-      .from("conversations")
-      .select("id")
-      .eq("id", conversationId)
-      .eq("home_id", params.homeId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (!convo) throw new Error("conversation_not_found");
   }
 
   await supabase.from("messages").insert({
@@ -51,7 +52,7 @@ export async function runAssistantChat(params: {
   let toolCalls: unknown = null;
 
   if (provider.isSimulated) {
-    reply = await simulatedRespond(params.message, ctx, supabase, conversationId);
+    reply = await simulatedRespond(params.message, ctx, supabase);
   } else {
     const result = await realLlmChat({
       provider,
@@ -68,7 +69,7 @@ export async function runAssistantChat(params: {
     conversation_id: conversationId,
     role: "assistant",
     content: reply,
-    tool_calls: toolCalls as never
+    tool_calls: toolCalls
   });
   if (insertErr) throw insertErr;
 
@@ -99,7 +100,7 @@ async function realLlmChat(args: {
         "physical location. If data is missing or uncertain, say so. " +
         "Only answer about the selected home."
     },
-    ...(history?.map((h) => ({ role: h.role as AiMessage["role"], content: h.content })) ?? []),
+    ...(history?.map((h: any) => ({ role: h.role as AiMessage["role"], content: h.content })) ?? []),
     { role: "user" as const, content: userMessage }
   ];
 
@@ -202,15 +203,18 @@ const INTENTS: { test: RegExp; tool: string; arg: (m: RegExpMatchArray) => Recor
 async function simulatedRespond(
   message: string,
   ctx: ToolContext,
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  _conversationId: string
+  supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<string> {
   const lower = message.toLowerCase();
   const hit = INTENTS.find((i) => i.test.test(lower));
   const tool = hit ? toolMap.get(hit.tool) : toolMap.get("searchObjects");
   if (!tool) return "I can help you find things. Try asking “where is my camera battery?”.";
 
-  const args = hit ? hit.arg(lower.match(hit.test) ?? []) : { query: lower };
+  let args: Record<string, unknown> = { query: lower };
+  if (hit) {
+    const matched = lower.match(hit.test);
+    if (matched) args = hit.arg(matched);
+  }
   let parsed = tool.parameters.safeParse(args);
   if (!parsed.success) parsed = tool.parameters.safeParse({ query: lower });
 
