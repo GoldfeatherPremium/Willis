@@ -7,11 +7,16 @@ import {
   parseIdParam,
   ApiError
 } from "@/lib/api-helpers";
+import { getReconstructionProvider } from "@/lib/reconstruction";
 
 /**
  * Marks a scan's uploads as finished and starts processing (queues the job).
  * Idempotent: if the scan is already processing/completed, it just returns the
  * current job state.
+ *
+ * When the reconstruction provider is the simulated adapter, the job is
+ * drained inline (bounded, ~1–2s) so the full dev flow completes immediately;
+ * real providers are polled by the cron worker.
  */
 export const POST = withErrorHandling(async (_request, ctx) => {
   await requireApiUser();
@@ -23,13 +28,10 @@ export const POST = withErrorHandling(async (_request, ctx) => {
   await requireApiHomeAccess(scan.home_id);
 
   const admin = await createAdminClient();
+  let requeued = false;
 
   if (scan.status === "pending" || scan.status === "failed") {
-    const { error } = await admin
-      .from("scans")
-      .update({ status: "validated", error: null })
-      .eq("id", scanId);
-    if (error) throw error;
+    await admin.from("scans").update({ status: "validated", error: null }).eq("id", scanId);
 
     const { data: job } = await admin
       .from("reconstruction_jobs")
@@ -41,15 +43,28 @@ export const POST = withErrorHandling(async (_request, ctx) => {
 
     if (job && job.status !== "queued" && job.status !== "running") {
       await admin.from("reconstruction_jobs").update({ status: "queued", progress: 0, error: null }).eq("id", job.id);
+      requeued = true;
     } else if (!job) {
-      const { error: jobError } = await admin.from("reconstruction_jobs").insert({
+      const { data: roomInfo } = await admin.from("scans").select("room_id").eq("id", scanId).single();
+      await admin.from("reconstruction_jobs").insert({
         scan_id: scanId,
         home_id: scan.home_id,
-        room_id: (await admin.from("scans").select("room_id").eq("id", scanId).single()).data?.room_id,
+        room_id: roomInfo?.room_id,
         provider: "simulated",
         status: "queued"
       });
-      if (jobError) throw jobError;
+      requeued = true;
+    }
+  }
+
+  // Inline drain for the simulated provider (dev flow completes instantly).
+  const provider = getReconstructionProvider();
+  if (requeued && provider.isSimulated) {
+    const { runPendingJobs } = await import("@/lib/jobs/worker");
+    try {
+      await runPendingJobs(1);
+    } catch {
+      // The cron worker will retry; never fail the response for this.
     }
   }
 
