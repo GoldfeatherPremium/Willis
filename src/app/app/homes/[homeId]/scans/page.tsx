@@ -12,7 +12,9 @@ import { formatRelativeTime, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_TONE: Record<string, "default" | "accent" | "success" | "error" | "warm"> = {
+type Tone = "default" | "accent" | "success" | "error" | "warm" | "muted";
+
+const STATUS_TONE: Record<string, Tone> = {
   completed: "success",
   processing: "accent",
   validated: "accent",
@@ -26,14 +28,19 @@ export default async function ScansPage({ params }: { params: Promise<{ homeId: 
   await requireApiHomeAccess(homeId);
 
   const supabase = await createClient();
-  const { data: scans } = await supabase
+  const { data: raw } = await supabase
     .from("scans")
     .select("id, status, capture_type, is_simulated, quality_score, error, created_at, completed_at, room_id, room:rooms(name)")
     .eq("home_id", homeId)
     .order("created_at", { ascending: false })
     .limit(100);
 
-  if (!scans) notFound();
+  if (!raw) notFound();
+
+  const scans = raw.map((s: any) => ({
+    ...s,
+    room: Array.isArray(s.room) ? (s.room[0] ?? { name: "Room" }) : s.room
+  }));
 
   return (
     <div className="space-y-6">
