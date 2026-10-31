@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatRelativeTime } from "@/lib/utils";
 
-interface InvObject {
+export interface InvObject {
   id: string;
   name: string;
   category: string;
