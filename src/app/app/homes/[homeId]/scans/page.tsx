@@ -5,6 +5,7 @@ import { requireApiHomeAccess } from "@/lib/api-helpers";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { ScanRetryButton } from "@/components/scan/scan-retry-button";
 import { formatRelativeTime, formatDateTime } from "@/lib/utils";
