@@ -8,7 +8,9 @@ import { formatRelativeTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const TYPE_TONE: Record<string, "default" | "accent" | "success" | "error" | "warm"> = {
+type Tone = "default" | "accent" | "success" | "error" | "warm" | "muted";
+
+const TYPE_TONE: Record<string, Tone> = {
   scan_completed: "success",
   scan_failed: "error",
   scan_started: "accent",
